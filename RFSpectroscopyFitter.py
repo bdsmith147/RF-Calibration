@@ -91,7 +91,9 @@ def Sort(tab, delta_arr):
 
 def Residuals(ps, d_arr, data):
     model = Model(d_arr, ps)
-    return (model - data)**2
+    res = (model - data)**2
+    res[:,1] = res[:,1] * 1000
+    return res
 
 #################   GENERATE FAKE DATA   #########################
 #dd = 1000
@@ -124,7 +126,7 @@ def Residuals(ps, d_arr, data):
 
 #################   PROCESS REAL DATA   #########################
 
-guess = [20, 0]
+guess = [25, 0]
 initial = Model(b, guess)
 
 plt.figure()
