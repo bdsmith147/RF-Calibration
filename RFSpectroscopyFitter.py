@@ -12,20 +12,26 @@ from matplotlib import pyplot as plt
 from scipy.integrate import complex_ode
 from lmfit import minimize, Parameters, report_fit
 from lmfit.models import LorentzianModel, VoigtModel
-filename = 'trialData'
-data = np.loadtxt(filename + '.csv', dtype=float, delimiter=',', skiprows=2, usecols=(0,1,2))
+filename = 'RF_2MHz_047_47z_sweep'
+ext = '.csv'
+path = 'Z:\\Data\\2019\\January_2019\\RF-Calibration\\'
+fullfilename = path + filename + ext
+data = np.loadtxt(fullfilename, dtype=float, delimiter=',', skiprows=2)
 data = data[:-2,:]
-bias, cloud1, cloud2 = data.T
+try:
+    bias, cloud1, cloud2 = data[:,30], data[:,53], data[:,56]
+except:
+    bias, cloud1, cloud2 = data.T
 cloud0 = 1 - cloud1 - cloud2
-data = np.stack((cloud0, cloud1, cloud2), axis=1)
+#data = np.stack((cloud0, cloud1, cloud2), axis=1)
 
 calibration = 0.47e3 #kHz/A
 
 mod = LorentzianModel()
-#mod = VoigtModel()
 pars = mod.guess(cloud1, x=bias)
 out = mod.fit(cloud1, pars, x=bias)
 #print(out.fit_report(min_correl=0.25))
+print('Center: %.3f +/- %.3f A'%(out.params['center'].value, out.params['center'].stderr))
 
 bias = (bias - out.params['center'].value) * calibration
 out.params['center'].value = 0
@@ -37,16 +43,17 @@ out.params['amplitude'].stderr = out.params['amplitude'].stderr * calibration
 #print(out.fit_report(min_correl=0.25))
 b = np.linspace(bias[0], bias[-1], 1000)
 new = mod.eval(out.params, x=b)
-print('Center: %.3f +/- %.3f'%(out.params['center'].value, out.params['center'].stderr))
+print('Center: %.3f +/- %.3f kHz'%(out.params['center'].value, out.params['center'].stderr))
 
 plt.figure()
-plt.plot(b, new, lw=2)
-plt.scatter(bias, cloud1)
-plt.scatter(bias, cloud0)
-plt.scatter(bias, cloud2)
+plt.plot(b, new, lw=2, color='green')
+plt.scatter(bias, cloud1, c='green')
+plt.scatter(bias, cloud0, c='red')
+plt.scatter(bias, cloud2, c='blue')
 plt.xlabel('Detuning (kHz)')
 plt.ylabel('Population')
 plt.title('Initial Fit')
+plt.ylim(0,1)
 plt.show()
 
 #%%
