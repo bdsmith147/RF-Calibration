@@ -122,27 +122,29 @@ def Residuals(ps, d_arr, data):
 #plt.title('Initial Guess')
 #plt.show()
 
-guess = [25, 0]
+#################   PROCESS REAL DATA   #########################
+
+guess = [20, 0]
 initial = Model(b, guess)
 
-#plt.figure()
-#plt.plot(b, initial, lw=3)
-#plt.scatter(bias, data[:,2], label="2")
-#plt.scatter(bias, data[:,1], label="1")
-#plt.scatter(bias, data[:,0], label="0")
-#plt.legend()
-#plt.title('Initial Guess')
-#plt.show()
+plt.figure()
+plt.plot(b, initial, lw=3)
+plt.scatter(bias, data[:,2], label="2")
+plt.scatter(bias, data[:,1], label="1")
+plt.scatter(bias, data[:,0], label="0")
+plt.legend()
+plt.title('Initial Guess')
+plt.show()
 
 #%%
-##################   FIT TO FAKE DATA   ###########################
+##################   FIT TO DATA   ###########################
 
 params = Parameters()
 params.add('Omeg', value=guess[0], min=0, max=40)
-params.add('eps', value=guess[1], min=-20, max=20, vary=True)
+params.add('eps', value=guess[1], vary=True)
 
 
-result = minimize(Residuals, params, method='differential_evolution', args=(bias, data))
+result = minimize(Residuals, params, method='nelder', args=(bias, data))
 report_fit(result)
 
 
@@ -155,4 +157,6 @@ plt.scatter(bias, data[:,1], label="1")
 plt.scatter(bias, data[:,0], label="2")
 plt.legend()
 plt.title('Fitted Parameters')
+plt.xlabel('Detuning (kHz)')
+plt.ylabel('Population')
 plt.show()
