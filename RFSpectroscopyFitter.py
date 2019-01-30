@@ -9,18 +9,20 @@ http://people.duke.edu/~ccc14/sta-663-2016/13_Optimization.html
 
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.integrate import complex_ode
 from lmfit import minimize, Parameters, report_fit
-from lmfit.models import LorentzianModel, VoigtModel
-filename = 'RF_2MHz_047_47z_sweep'
+from lmfit.models import LorentzianModel
+filename = 'RF_1MHz_036_36z_Xsweep'
 ext = '.csv'
 path = 'Z:\\Data\\2019\\January_2019\\RF-Calibration\\'
 fullfilename = path + filename + ext
 data = np.loadtxt(fullfilename, dtype=float, delimiter=',', skiprows=2)
 data = data[:-2,:]
+
 try:
+    data = data[data[:,30].argsort(),:]    
     bias, cloud1, cloud2 = data[:,30], data[:,53], data[:,56]
 except:
+    data = data[data[:,0].argsort()]
     bias, cloud1, cloud2 = data.T
 cloud0 = 1 - cloud1 - cloud2
 #data = np.stack((cloud0, cloud1, cloud2), axis=1)
@@ -28,12 +30,12 @@ cloud0 = 1 - cloud1 - cloud2
 calibration = 0.47e3 #kHz/A
 
 mod = LorentzianModel()
-pars = mod.guess(cloud1, x=bias)
+pars = mod.guess(np.array(cloud1), x=bias)
 out = mod.fit(cloud1, pars, x=bias)
-#print(out.fit_report(min_correl=0.25))
+print(out.fit_report(min_correl=0.5))
 print('Center: %.3f +/- %.3f A'%(out.params['center'].value, out.params['center'].stderr))
 
-bias = (bias - out.params['center'].value) * calibration
+#bias = (bias - out.params['center'].value) * calibration
 out.params['center'].value = 0
 out.params['center'].stderr = out.params['center'].stderr * calibration
 out.params['sigma'].value = out.params['sigma'].value * calibration
@@ -99,7 +101,7 @@ def Sort(tab, delta_arr):
 def Residuals(ps, d_arr, data):
     model = Model(d_arr, ps)
     res = (model - data)**2
-    res[:,1] = res[:,1] * 1000
+    res[:,1] = res[:,1]
     return res
 
 #################   GENERATE FAKE DATA   #########################
@@ -107,7 +109,7 @@ def Residuals(ps, d_arr, data):
 #dmax = 50000
 #delta_arr = np.arange(-dmax, dmax + dd, dd)
 #Omeg = 40000
-#eps = -40000
+#eps = -20000
 #params = [Omeg, eps]
 #
 #

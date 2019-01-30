@@ -12,11 +12,15 @@ from matplotlib import pyplot as plt
 from scipy.integrate import complex_ode
 from lmfit import minimize, Parameters, report_fit
 
-#filename = 'RabiFlop_-35dBm_20180904'
-#data = np.loadtxt(filename + '.csv', dtype=float, delimiter=',', skiprows=2, usecols=(0,1,2))
+# ********* LOAD REAL DATA *************
+filename = '20190129_RamRabiFlop_1MHz_2.77By'
+data = np.loadtxt(filename + '.csv', dtype=float, delimiter=',', skiprows=2, usecols=(0,1,2))
 #data = data[:-2,:]
-#time, cloud1, cloud2 = data.T
-#cloud0 = 1 - cloud1 - cloud2
+times, cloud2, cloud1 = data.T
+cloud0 = 1 - cloud1 - cloud2
+data = np.stack((cloud0, cloud1, cloud2), axis=1)
+data = data[times.argsort()]
+times = times[times.argsort()]
 
 def Model(times, ivs, ps):
     '''Using the parameters supplied, computes a complex integration of the
@@ -36,57 +40,65 @@ def Model(times, ivs, ps):
         dcdt = np.dot(Ham, c)
         return dcdt
     durr = times.max()
+    length = len(times)
     dt = times[1] - times[0]
     ivs = np.array([0.0, 0, 1.00], dtype='float')
     odiff = complex_ode(Coefficients)
     odiff.set_initial_value(ivs)
-    times, coeffs = [], []
+    coeffs = []
+    time_arr = []
     coeffs.append(ivs)
+    time_arr.append(times[0])
+    n = 0
     while odiff.successful() and odiff.t <= durr:
-        sol = odiff.integrate(odiff.t+dt)
+        if n+1 < length: 
+            dt = times[n+1] - times[n]
+        sol = odiff.integrate(odiff.t + dt)
+#        print(dt, odiff.t)
+        time_arr.append(odiff.t)
         coeffs.append(np.abs((sol * sol)))
-    coeffs = np.array(coeffs)
+        n += 1
+    coeffs = np.array(coeffs[:-1])
+    time_arr = np.array(time_arr)
+    print("Lengths:", time_arr.shape, times.shape)
     return coeffs
 
 #################   GENERATE FAKE DATA   #########################
-delta = 0
+delta = 25000
 Omeg = 20000
 eps = 0
 params = [Omeg, delta, eps]
 
 c0 = np.array([0.0, 0, 1.00], dtype='complex')
-t1 = 1e-3
+t1 = 3e-4
 dt = 1e-5
 
-times = np.arange(0, t1+dt, dt)
-coeffs = Model(times, c0, params)
+#times = np.arange(0, t1+dt, dt)
 np.random.seed(54)
 noise = np.random.normal(0, 0.05, (len(times), 3))
-data = coeffs + noise
+#coeffs = Model(times, c0, params)
+#data = coeffs + noise
 
+###################   INITIAL FIT TO  DATA   ###########################
 
-
-#%%
-###################   FIT TO FAKE DATA   ###########################
-
-guess = [23000, 1000, 0]
+guess = [40000, 45000, 0]
 ivs = np.array([0.0, 0.0, 1.0])
 t = np.arange(0, t1+dt/10.0, dt/10.0)
 initial = Model(t, ivs, guess)
 plt.figure()
 plt.plot(t, initial, lw=3)
-plt.scatter(times, data[:,0], label="0")
-plt.scatter(times, data[:,1], label="1")
-plt.scatter(times, data[:,2], label="2")
+plt.scatter(times, data[:,0], label="0", color='blue')
+plt.scatter(times, data[:,1], label="1", color='green')
+plt.scatter(times, data[:,2], label="2", color='red')
 plt.legend()
 plt.xlim(0,t1)
 plt.title('Initial Guess')
 plt.show()
 #dt = 1e-5
 #t = np.arange(0, t1+dt, dt)
-
+#%%
 params = Parameters()
-params.add('Omeg', value=guess[0], min=0, max=40000)
+params.add('Omeg', value=guess[0], min=0, max=100000)
 params.add('delta', value=guess[1])
 params.add('eps', value=guess[2], vary=False)
 params.add('iv0', value=ivs[0], vary=False)
@@ -96,6 +108,7 @@ params.add('iv2', value=ivs[2], vary=False)
 def Residuals(ps, ts, data):
     ivs = np.array([ps['iv0'], ps['iv1'], ps['iv2']])
     model = Model(ts, ivs, ps)
+    print("Data", model.shape, data.shape)
     return np.abs(model - data)
 
 
@@ -106,9 +119,9 @@ t = np.arange(0, t1+dt/10.0, dt/10.0)
 final = Model(t, ivs, result.params)
 plt.figure()
 plt.plot(t, final, lw=3)
-plt.scatter(times, data[:,0], label="0")
-plt.scatter(times, data[:,1], label="1")
-plt.scatter(times, data[:,2], label="2")
+plt.scatter(times, data[:,0], label="0", color='blue')
+plt.scatter(times, data[:,1], label="1", color='green')
+plt.scatter(times, data[:,2], label="2", color='red')
 plt.legend()
 plt.xlim(0,t1)
 plt.title('Fitted Parameters')
