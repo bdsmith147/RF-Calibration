@@ -44,23 +44,24 @@ def Model(times, ivs, ps):
     dt = times[1] - times[0]
     ivs = np.array([0.0, 0, 1.00], dtype='float')
     odiff = complex_ode(Coefficients)
-    odiff.set_initial_value(ivs)
+    odiff.set_initial_value(ivs, t=times[0])
+#    print("Times: ", odiff.t)
     coeffs = []
     time_arr = []
     coeffs.append(ivs)
-    time_arr.append(times[0])
+    #time_arr.append(times[0])
     n = 0
     while odiff.successful() and odiff.t <= durr:
         if n+1 < length: 
             dt = times[n+1] - times[n]
         sol = odiff.integrate(odiff.t + dt)
 #        print(dt, odiff.t)
-        time_arr.append(odiff.t)
+#        time_arr.append(odiff.t)
         coeffs.append(np.abs((sol * sol)))
         n += 1
     coeffs = np.array(coeffs[:-1])
     time_arr = np.array(time_arr)
-    print("Lengths:", time_arr.shape, times.shape)
+#    print("Lengths:", time_arr.shape, times.shape)
     return coeffs
 
 #################   GENERATE FAKE DATA   #########################
@@ -108,7 +109,7 @@ params.add('iv2', value=ivs[2], vary=False)
 def Residuals(ps, ts, data):
     ivs = np.array([ps['iv0'], ps['iv1'], ps['iv2']])
     model = Model(ts, ivs, ps)
-    print("Data", model.shape, data.shape)
+#    print("Data", model.shape, data.shape)
     return np.abs(model - data)
 
 
